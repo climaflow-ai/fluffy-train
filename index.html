@@ -101,7 +101,7 @@ canvas { display: block; width: 100%; height: 100%; }
   <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="ov-title">
     <div class="panel">
       <h1 id="ov-title">Ангарский перевал</h1>
-      <p id="ov-text">Ты идёшь по Ангарскому перевалу в Крыму. Три этапа: к Кутузовскому озеру, к роще секвой и к смотровой площадке. Медведи бросаются на тебя, белки швыряют шишки, а из-за деревьев иногда выскакивает злая Лена с рыжим котом на плече и кидает пирожные. Ночью нападают совы.</p>
+      <p id="ov-text">Ты идёшь по Ангарскому перевалу в Крыму. Три этапа: к Кутузовскому озеру, к роще секвой и к смотровой площадке. Медведи выскакивают из-за деревьев и бросаются на тебя, белки бегают по веткам и швыряют шишки лапой, а из-за деревьев иногда выскакивает злая Лена с рыжим котом на плече и кидает пирожные. Ночью нападают совы.</p>
       <p class="muted" id="ov-stats">Красная метка на тропе показывает, куда прилетит. Ягоды на тропе добавляют жизнь, всего их может быть пять. Проведи пальцем влево или вправо, чтобы сменить полосу. Можно нажимать на левую или правую часть экрана, на компьютере работают стрелки.</p>
       <button id="ov-btn" type="button">Идти</button>
     </div>
@@ -372,7 +372,7 @@ canvas { display: block; width: 100%; height: 100%; }
     else kind = hash(key + 29) < cfg.beechFrac ? 'beech' : 'pine';
     var off = kind === 'seq' ? 2.3 + hash(key + 9) * 0.4 : 1.95 + hash(key + 3) * 0.7;
     return { key: key, a: a, off: off, kind: kind, seed: hash(key + 5), i: i, side: side,
-             sq: kind !== 'seq' && a < L - 16 && hash(key + 23) < 0.6 };
+             sq: kind !== 'seq' && a < L - 16 && hash(key + 23) < 0.2 };
   }
 
   function genBears() {
@@ -392,7 +392,7 @@ canvas { display: block; width: 100%; height: 100%; }
           row.push({ lane: l1, charge: false }, { lane: l2, charge: false });
         } else {
           var l0 = rnd() < 0.5 ? -1 : 1;
-          row.push({ walk: true, lane0: l0, dir: l0 > 0 ? -1 : 1, v: cfg.walkV, charge: false });
+          row.push({ walk: true, side: l0, charge: false });
         }
         nsafe = [-1, 0, 1].filter(function (l) {
           return !row.some(function (b) { return !b.walk && Math.abs(b.lane - l) < 0.9; });
@@ -402,7 +402,7 @@ canvas { display: block; width: 100%; height: 100%; }
         });
       } while (!ok && ++tries < 12);
       if (!ok) { row = [{ lane: lane(), charge: false }]; nsafe = [-1, 0, 1]; }
-      row.forEach(function (b) { b.a = a; b.hit = false; b.alert = false; b.roared = false; b.cl = b.lane; out.push(b); });
+      row.forEach(function (b) { b.a = a; b.ta = a - 0.4; b.hit = false; b.alert = false; b.roared = false; b.emerged = false; if (!b.walk) b.side = b.lane < 0 ? -1 : (b.lane > 0 ? 1 : (rnd() < 0.5 ? -1 : 1)); b.hide = b.side * 2.45; b.cl = b.hide; out.push(b); });
       safe = nsafe;
       a += cfg.gap0 - cfg.gapK * prog + rnd() * 2;
     }
@@ -423,7 +423,7 @@ canvas { display: block; width: 100%; height: 100%; }
     }
   }
   function laneOf(b, t) {
-    if (b.charge) return b.cl;
+    return b.cl;
     if (!b.walk) return b.lane;
     var p = b.lane0 + b.dir * b.v * t;
     var u = (((p + 1) % 4) + 4) % 4;
@@ -493,6 +493,63 @@ canvas { display: block; width: 100%; height: 100%; }
     line(x + sqDir * len * 0.55 * s, brY - 0.04 * s, x + sqDir * len * 0.69 * s, brY - 0.17 * s, col(C.trunk, z), 0.035 * s);
     squirrelFig(x + sqDir * len * 0.69 * s, ey + 0.02 * s, s, z, seed, -sqDir, raise);
   }
+  function squirrelFig2(x, y, s, z, seed, dir, ar, hop) {
+    var q = s * 0.58;
+    if (q < 5) return;
+    y -= hop * q;
+    var f = function (c) { return col(shade(c), z); };
+    var sw = Math.sin(T * 3 + seed * 9);
+    var body = [190, 98, 40], dark = [150, 70, 28], light = [232, 160, 98], cream = [244, 226, 196];
+    var n = 10, i;
+    for (i = 0; i <= n; i++) {
+      var t = i / n;
+      var px = x - dir * (0.2 + 0.3 * Math.sin(t * 2.6)) * q + sw * 0.08 * q * t;
+      var py = y - (0.3 + 1.2 * t) * q;
+      var rad = (0.13 + 0.17 * Math.sin(t * 2.7 + 0.25)) * q;
+      el(px, py, rad, rad * 1.1, f(t > 0.78 ? light : (i % 2 ? body : dark)));
+    }
+    el(x - dir * 0.04 * q, y - 0.2 * q, 0.2 * q, 0.2 * q, f(dark));
+    el(x + dir * 0.1 * q, y - 0.03 * q, 0.12 * q, 0.045 * q, f(dark));
+    ctx.fillStyle = f(body); ctx.beginPath();
+    ctx.ellipse(x + dir * 0.03 * q, y - 0.44 * q, 0.22 * q, 0.31 * q, dir * -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = f(cream); ctx.beginPath();
+    ctx.ellipse(x + dir * 0.13 * q, y - 0.42 * q, 0.12 * q, 0.2 * q, dir * -0.2, 0, Math.PI * 2); ctx.fill();
+    el(x + dir * 0.2 * q, y - 0.8 * q, 0.17 * q, 0.16 * q, f(body));
+    el(x + dir * 0.32 * q, y - 0.76 * q, 0.1 * q, 0.07 * q, f(light));
+    el(x + dir * 0.27 * q, y - 0.7 * q, 0.09 * q, 0.05 * q, f(cream));
+    el(x + dir * 0.4 * q, y - 0.77 * q, 0.03 * q, 0.025 * q, '#2B1A10');
+    tri(x + dir * 0.1 * q, y - 0.9 * q, x + dir * 0.2 * q, y - 0.93 * q, x + dir * 0.1 * q, y - 1.12 * q, f(body));
+    tri(x + dir * 0.1 * q, y - 1.0 * q, x + dir * 0.14 * q, y - 1.0 * q, x + dir * 0.09 * q, y - 1.16 * q, f([60, 34, 18]));
+    el(x + dir * 0.27 * q, y - 0.84 * q, 0.04 * q, 0.04 * q, '#150C06');
+    el(x + dir * 0.28 * q, y - 0.855 * q, 0.012 * q, 0.012 * q, '#FFFFFF');
+    if (ar !== null) {
+      var hx, hy, sx0 = x + dir * 0.18 * q, sy0 = y - 0.55 * q;
+      if (ar <= 1) { hx = x + dir * (0.2 - 0.35 * ar) * q; hy = y - (0.5 + 0.75 * ar) * q; }
+      else { var kk = (ar - 1) / 0.2; hx = x + dir * (-0.15 + 0.8 * kk) * q; hy = y - (1.25 - 0.85 * kk) * q; }
+      line(sx0, sy0, hx, hy, f(light), 0.1 * q);
+      el(hx, hy, 0.06 * q, 0.06 * q, f(light));
+      if (ar < 1.15) cone(hx, hy - 0.12 * q, 0.1 * q, dir * 0.3 + Math.sin(T * 10) * 0.1);
+    } else {
+      el(x + dir * 0.31 * q, y - 0.56 * q, 0.06 * q, 0.07 * q, f([140, 96, 46]));
+      el(x + dir * 0.31 * q, y - 0.62 * q, 0.07 * q, 0.035 * q, f([84, 56, 28]));
+      el(x + dir * 0.24 * q, y - 0.52 * q, 0.05 * q, 0.035 * q, f(light));
+      el(x + dir * 0.37 * q, y - 0.52 * q, 0.05 * q, 0.035 * q, f(light));
+    }
+  }
+  function treeBranch2(x, brY, s, z, seed, sqDir, len, thr) {
+    var ex = x + sqDir * len * s, ey = brY - 0.08 * s;
+    line(x, brY, ex, ey, col(C.trunk, z), 0.075 * s);
+    line(x + sqDir * len * 0.55 * s, brY - 0.04 * s, x + sqDir * len * 0.7 * s, brY - 0.17 * s, col(C.trunk, z), 0.035 * s);
+    var ph = T * 0.7 + seed * 20, u, dir, hop = 0, ar = null;
+    if (thr) { u = thr.u; dir = sqDir; ar = thr.ar; }
+    else {
+      u = 0.62 + 0.3 * Math.sin(ph);
+      var v = Math.cos(ph);
+      dir = v >= 0 ? sqDir : -sqDir;
+      if (Math.abs(v) > 0.25) hop = Math.abs(Math.sin(T * 9 + seed * 5)) * 0.07;
+    }
+    squirrelFig2(x + sqDir * len * u * s, brY - 0.08 * s * u + 0.02 * s, s, z, seed, dir, ar, hop);
+  }
   function pine(x, y, s, z, seed, sqDir, raise) {
     var hk = 1 + seed * 0.35, wk = 0.9 + seed * 0.3;
     ctx.fillStyle = col(C.trunk, z); ctx.fillRect(x - 0.09 * s, y - 0.7 * s, 0.18 * s, 0.7 * s);
@@ -501,13 +558,13 @@ canvas { display: block; width: 100%; height: 100%; }
       tri(x - hw, by, x + hw, by, x, by - th, col(t % 2 ? C.pine2 : C.pine1, z));
       tri(x, by - th, x, by, x + hw, by, NIGHT ? 'rgba(150,180,255,0.09)' : 'rgba(255,240,170,0.12)');
     }
-    if (sqDir) treeBranch(x, y - 1.3 * s * hk, s, z, seed, sqDir, 0.9, raise);
+    if (sqDir) treeBranch2(x, y - 1.3 * s * hk, s, z, seed, sqDir, 0.9, raise);
   }
-  function beech(x, y, s, z, seed, sqDir, raise) {
-    var hk = 1 + seed * 0.3, th = 2.4 * s * hk;
+  function beech(x, y, s, z, seed, sqDir, raise, fat) {
+    var hk = 1 + seed * 0.3, th = 2.4 * s * hk, fw = fat ? 1.9 : 1;
     ctx.fillStyle = col(C.btrunk, z); ctx.beginPath();
-    ctx.moveTo(x - 0.42 * s, y); ctx.lineTo(x - 0.3 * s, y - 0.5 * s); ctx.lineTo(x - 0.24 * s, y - th);
-    ctx.lineTo(x + 0.24 * s, y - th); ctx.lineTo(x + 0.3 * s, y - 0.5 * s); ctx.lineTo(x + 0.42 * s, y);
+    ctx.moveTo(x - 0.42 * s * fw, y); ctx.lineTo(x - 0.3 * s * fw, y - 0.5 * s); ctx.lineTo(x - 0.24 * s * fw, y - th);
+    ctx.lineTo(x + 0.24 * s * fw, y - th); ctx.lineTo(x + 0.3 * s * fw, y - 0.5 * s); ctx.lineTo(x + 0.42 * s * fw, y);
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(x - 0.14 * s, y - th, 0.09 * s, th * 0.96);
     el(x - 0.22 * s, y - 0.2 * s, 0.14 * s, 0.22 * s, col([72, 108, 64], z));
@@ -518,7 +575,7 @@ canvas { display: block; width: 100%; height: 100%; }
       el(x + bl[0] * s, cy + bl[1] * s, bl[2] * s, bl[3] * s, col(bl[4] ? C.leaf2 : C.leaf1, z));
     }
     el(x - 0.3 * s, cy - 0.7 * s, 0.5 * s, 0.22 * s, NIGHT ? 'rgba(160,190,255,0.08)' : 'rgba(255,255,200,0.14)');
-    if (sqDir) treeBranch(x, y - 1.7 * s * hk, s, z, seed, sqDir, 1.0, raise);
+    if (sqDir) treeBranch2(x, y - 1.7 * s * hk, s, z, seed, sqDir, 1.0, raise);
   }
   function bush(x, y, s, z) {
     el(x, y - 0.18 * s, 0.42 * s, 0.22 * s, col(C.bush, z));
@@ -604,7 +661,7 @@ canvas { display: block; width: 100%; height: 100%; }
     }
   }
   function bear(x, y0, s0, z, b) {
-    var s = s0 * 1.15, lane = laneOf(b, T), vel = b.walk ? (laneOf(b, T + 0.05) - lane) * 20 : 0;
+    var s = s0 * 1.15, lane = laneOf(b, T), vel = (b.vx || 0) * 0.3;
     var run = b.alert, bob = run ? Math.abs(Math.sin(T * 11 + b.a)) * 0.14 * s : 0, y = y0 - bob;
     var sway = (b.walk || run) ? Math.sin(T * (run ? 14 : 7) + b.a) * 0.04 * s : 0;
     var lean = Math.max(-1, Math.min(1, vel)) * 0.07 * s;
@@ -651,6 +708,66 @@ canvas { display: block; width: 100%; height: 100%; }
     line(hx + 0.2 * s, y - 0.96 * s, hx + 0.05 * s, y - 0.89 * s, bc, bw);
   }
   function hiker(x, y, s, ph) {
+    var sw = Math.sin(ph), base = y, bob = Math.abs(sw) * 0.035 * s;
+    y -= bob;
+    var skin = '#E2B48C', hair = '#3B2A1E', pants = '#4D5A6B', pantsD = '#3E4958';
+    var jacket = '#D8622B', jacketD = '#B44A1E', pack = '#5E7040';
+    var hipY = y - 0.84 * s, li, d;
+    el(x, base, 0.42 * s, 0.1 * s, 'rgba(0,0,0,0.32)');
+    for (li = 0; li < 2; li++) {
+      var hx = x + (li ? 0.1 : -0.1) * s, fy = base - (li ? Math.max(0, -sw) : Math.max(0, sw)) * 0.16 * s;
+      ctx.fillStyle = li ? pantsD : pants; ctx.beginPath();
+      ctx.moveTo(hx - 0.09 * s, hipY); ctx.lineTo(hx + 0.09 * s, hipY);
+      ctx.lineTo(hx + 0.065 * s, fy - 0.12 * s); ctx.lineTo(hx - 0.065 * s, fy - 0.12 * s); ctx.closePath(); ctx.fill();
+      rr(hx - 0.07 * s, fy - 0.17 * s, 0.14 * s, 0.07 * s, 0.02 * s, '#2F3640');
+      rr(hx - 0.085 * s, fy - 0.11 * s, 0.17 * s, 0.11 * s, 0.04 * s, '#4A3020');
+      rr(hx - 0.092 * s, fy - 0.025 * s, 0.184 * s, 0.03 * s, 0.015 * s, '#1E1510');
+    }
+    rr(x - 0.22 * s, hipY - 0.1 * s, 0.44 * s, 0.17 * s, 0.07 * s, pants);
+    ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.fillRect(x, hipY - 0.08 * s, 0.2 * s, 0.14 * s);
+    ctx.fillStyle = jacket; ctx.beginPath();
+    ctx.moveTo(x - 0.3 * s, y - 1.32 * s); ctx.lineTo(x + 0.3 * s, y - 1.32 * s);
+    ctx.lineTo(x + 0.23 * s, hipY - 0.02 * s); ctx.lineTo(x - 0.23 * s, hipY - 0.02 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath();
+    ctx.moveTo(x, y - 1.32 * s); ctx.lineTo(x + 0.3 * s, y - 1.32 * s);
+    ctx.lineTo(x + 0.23 * s, hipY - 0.02 * s); ctx.lineTo(x, hipY - 0.02 * s); ctx.closePath(); ctx.fill();
+    for (d = -1; d <= 1; d += 2) {
+      var sg = sw * d * -1;
+      var sx0 = x + d * 0.3 * s, sy0 = y - 1.28 * s, ex = x + d * 0.36 * s, ey = y - 1.0 * s + sg * 0.03 * s;
+      var hx2 = x + d * 0.35 * s, hy2 = y - 0.76 * s + sg * 0.07 * s;
+      line(sx0, sy0, ex, ey, d > 0 ? jacketD : jacket, 0.13 * s);
+      line(ex, ey, hx2, hy2 - 0.05 * s, d > 0 ? jacketD : jacket, 0.115 * s);
+      el(hx2, hy2, 0.05 * s, 0.055 * s, skin);
+      if (NIGHT && d < 0) {
+        el(hx2 - 0.02 * s, hy2 + 0.03 * s, 0.14 * s, 0.14 * s, 'rgba(255,200,110,0.35)');
+        el(hx2 - 0.02 * s, hy2 + 0.03 * s, 0.045 * s, 0.065 * s, '#FFD27A');
+      }
+    }
+    var px = x + sw * 0.012 * s;
+    rr(px - 0.25 * s, y - 1.38 * s, 0.5 * s, 0.66 * s, 0.12 * s, pack);
+    rr(px - 0.25 * s, y - 1.38 * s, 0.5 * s, 0.24 * s, 0.1 * s, '#6F8347');
+    rr(px - 0.2 * s, y - 1.0 * s, 0.4 * s, 0.26 * s, 0.06 * s, '#516134');
+    rr(px - 0.33 * s, y - 1.04 * s, 0.1 * s, 0.3 * s, 0.05 * s, '#4B5A30');
+    rr(px + 0.23 * s, y - 1.04 * s, 0.1 * s, 0.3 * s, 0.05 * s, '#4B5A30');
+    rr(px + 0.245 * s, y - 1.16 * s, 0.07 * s, 0.22 * s, 0.03 * s, '#3A7CA5');
+    rr(px - 0.04 * s, y - 1.2 * s, 0.08 * s, 0.07 * s, 0.01 * s, '#D6C27A');
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(px, y - 1.36 * s, 0.25 * s, 0.6 * s);
+    rr(px - 0.28 * s, y - 1.52 * s, 0.56 * s, 0.15 * s, 0.075 * s, '#E0A93A');
+    line(px - 0.12 * s, y - 1.52 * s, px - 0.12 * s, y - 1.37 * s, '#6B4A1A', 0.025 * s);
+    line(px + 0.12 * s, y - 1.52 * s, px + 0.12 * s, y - 1.37 * s, '#6B4A1A', 0.025 * s);
+    line(x - 0.21 * s, y - 1.3 * s, x - 0.24 * s, y - 0.9 * s, '#2B2B2B', 0.04 * s);
+    line(x + 0.21 * s, y - 1.3 * s, x + 0.24 * s, y - 0.9 * s, '#2B2B2B', 0.04 * s);
+    rr(x - 0.05 * s, y - 1.5 * s, 0.1 * s, 0.09 * s, 0.03 * s, '#C99A72');
+    el(x, y - 1.6 * s, 0.115 * s, 0.13 * s, hair);
+    el(x - 0.118 * s, y - 1.58 * s, 0.025 * s, 0.04 * s, skin);
+    el(x + 0.118 * s, y - 1.58 * s, 0.025 * s, 0.04 * s, skin);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = Math.max(1, 0.012 * s);
+    for (var hl = -2; hl <= 2; hl++) { ctx.beginPath(); ctx.moveTo(x + hl * 0.03 * s, y - 1.68 * s); ctx.lineTo(x + hl * 0.04 * s, y - 1.5 * s); ctx.stroke(); }
+    el(x, y - 1.67 * s, 0.21 * s, 0.05 * s, '#BFA060');
+    ctx.fillStyle = '#C9A96A'; ctx.beginPath(); ctx.arc(x, y - 1.69 * s, 0.12 * s, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#6B4426'; ctx.fillRect(x - 0.12 * s, y - 1.7 * s, 0.24 * s, 0.035 * s);
+  }
+  function hikerOld(x, y, s, ph) {
     var sw = Math.sin(ph), bob = Math.abs(sw) * 0.04 * s, base = y;
     y -= bob;
     el(x, base, 0.38 * s, 0.1 * s, 'rgba(0,0,0,0.3)');
@@ -1026,6 +1143,8 @@ canvas { display: block; width: 100%; height: 100%; }
     for (i = 0; i < bears.length; i++) {
       var b = bears[i]; z = b.a - D;
       if (z > zmin - 1 && z < VIEW) items.push({ z: z, k: 'bear', b: b });
+      var tz = b.ta - D;
+      if (tz > zmin - 1 && tz < VIEW) items.push({ z: tz, k: 'htree', b: b });
     }
     for (i = 0; i < berries.length; i++) {
       if (berries[i].got) continue;
@@ -1062,6 +1181,7 @@ canvas { display: block; width: 100%; height: 100%; }
     for (i = 0; i < items.length; i++) {
       var it = items[i], c = sc(it.z), y = sy(it.z), s = unit * c, x;
       if (it.k === 'bear') { x = cx + laneOf(it.b, T) * unit * c; bear(x, y, s, it.z, it.b); }
+      else if (it.k === 'htree') { beech(cx + it.b.hide * unit * c, y, s, it.z, hash(it.b.ta), 0, null, true); }
       else if (it.k === 'mark') { drawMark(cx + it.lane * unit * c, y, s); }
       else if (it.k === 'flora') { flora(cx + it.lane * unit * c, y, s, it.z, it); }
       else if (it.k === 'berry') { berryFig(cx + it.b.lane * unit * c, y, s, it.z, it.b); }
@@ -1086,7 +1206,11 @@ canvas { display: block; width: 100%; height: 100%; }
         if (!(invuln > 0 && Math.floor(T * 12) % 2 === 0)) hiker(cx + pl * unit, gy, unit, phase);
       } else {
         x = cx + it.side * it.off * unit * c;
-        var raise = !!(it.sq && thrower.on && thrower.i === it.i && thrower.side === it.side);
+        var raise = null;
+        if (it.sq && thrower.on && thrower.i === it.i && thrower.side === it.side) {
+          var prg = 1 - thrower.wind / cfg.sqWind;
+          raise = { u: thrower.u, ar: prg < 0.8 ? prg / 0.8 : 1 + (prg - 0.8) / 0.2 * 0.2 };
+        }
         if (it.k === 'pine') pine(x, y, s, it.z, it.seed, it.sq ? -it.side : 0, raise);
         else if (it.k === 'beech') beech(x, y, s, it.z, it.seed, it.sq ? -it.side : 0, raise);
         else if (it.k === 'bush') bush(x, y, s, it.z);
@@ -1162,7 +1286,7 @@ canvas { display: block; width: 100%; height: 100%; }
     state = 'lose'; pending = stg; pendingKeep = false;
     sfx.lose();
     show('Не дошёл до цели', 'Жизни закончились на отметке ' + Math.floor(D) + ' м из ' + L + '. Попробуй пройти этот этап заново.',
-      'Красная метка на тропе показывает, куда прилетит шишка, пирожное или сова. Медведь бросается, когда подбегает близко: уходи в сторону в последний момент. Ягоды добавляют жизнь.', 'Пройти заново');
+      'Красная метка на тропе показывает, куда прилетит шишка, пирожное или сова. Медведь выскакивает из-за толстого дерева. Когда он побежал на тебя, уходи в сторону в последний момент. Ягоды добавляют жизнь.', 'Пройти заново');
   }
   function win() {
     state = 'win';
@@ -1198,7 +1322,7 @@ canvas { display: block; width: 100%; height: 100%; }
     if (!cand.length) return false;
     var c = cand[(Math.random() * cand.length) | 0];
     thrower.on = true; thrower.wind = cfg.sqWind; thrower.i = c.i; thrower.side = c.side; thrower.a = c.a;
-    thrower.off = c.off; thrower.kind = c.kind; thrower.target = Math.max(-1, Math.min(1, Math.round(pl)));
+    thrower.off = c.off; thrower.kind = c.kind; thrower.u = 0.62 + 0.3 * Math.sin(T * 0.7 + c.seed * 20); thrower.target = Math.max(-1, Math.min(1, Math.round(pl)));
     sfx.chatter();
     return true;
   }
@@ -1232,11 +1356,15 @@ canvas { display: block; width: 100%; height: 100%; }
     var i;
     for (i = 0; i < bears.length; i++) {
       var b = bears[i], z = b.a - D;
-      if (b.charge && z < cfg.chargeDist && z > -2) {
+      b.vx = b.pcl === undefined ? 0 : (b.cl - b.pcl) / Math.max(dt, 0.001); b.pcl = b.cl;
+      if (!b.emerged && z < cfg.chargeDist + (b.walk ? 3 : 0) && z > -2) { b.emerged = true; b.alert = true; sfx.growl(0.7); }
+      if (b.emerged && z > -3) {
         if (!b.alert) { b.alert = true; sfx.growl(0.5); }
-        b.a -= cfg.chargeSpeed * dt;
-        if (z > cfg.lock) {
-          var dd = pl - b.cl, m = cfg.track * dt;
+        b.a -= cfg.chargeSpeed * (b.charge ? 1 : 0.6) * dt;
+        if (b.walk) { b.cl += -b.side * 1.7 * dt; }
+        else if (!b.charge) { var d0 = b.lane - b.cl, m0 = 4.5 * dt; b.cl += Math.max(-m0, Math.min(m0, d0)); }
+        else if (z > cfg.lock) {
+          var dd = Math.max(-1, Math.min(1, pl)) - b.cl, m = (Math.abs(b.cl) > 1.15 ? 4.5 : cfg.track) * dt;
           b.cl += Math.max(-m, Math.min(m, dd));
         }
       } else if (!b.charge && !b.roared && z < 9 && z > 0) {
@@ -1270,7 +1398,7 @@ canvas { display: block; width: 100%; height: 100%; }
       thrower.wind -= dt;
       if (thrower.wind <= 0) {
         var len = thrower.kind === 'beech' ? 1.0 : 0.9, z0 = thrower.a - D;
-        if (z0 > 6) projs.push({ type: 'cone', a: thrower.a, from: thrower.side * (thrower.off - len * 0.69), to: thrower.target, z0: z0, h0: 1.45, hit: false, pk: 0 });
+        if (z0 > 6) projs.push({ type: 'cone', a: thrower.a, from: thrower.side * (thrower.off - len * thrower.u), to: thrower.target, z0: z0, h0: 1.45, hit: false, pk: 0 });
         thrower.on = false; sqCd = rand(cfg.sqMin, cfg.sqMax);
         sfx.toss();
       }
